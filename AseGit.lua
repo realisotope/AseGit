@@ -18,6 +18,24 @@ if not json then
     return
 end
 
+do
+    local seed = os.time() + math.floor((os.clock() % 1) * 1000000)
+    math.randomseed(seed)
+end
+
+-- Directory Helper
+local function safeMakeDirectory(path)
+    if fs.isDirectory(path) then
+        return true
+    end
+    pcall(function() fs.makeDirectory(path) end)
+    if not fs.isDirectory(path) then
+        app.alert(string.format("AseGit: failed to create directory:\n%s\nPlease check permissions.", path))
+        return false
+    end
+    return true
+end
+
 local spritePath = spr.filename
 local parentDir = fs.filePath(spritePath)
 local spriteName = fs.fileName(spritePath)
@@ -45,12 +63,8 @@ local autoCommitTimer = nil
 
 local settings = {}
 
-if not fs.isDirectory(mainRepoDir) then
-    fs.makeDirectory(mainRepoDir)
-end
-if not fs.isDirectory(repoDir) then
-    fs.makeDirectory(repoDir)
-end
+if not safeMakeDirectory(mainRepoDir) then return end
+if not safeMakeDirectory(repoDir) then return end
 
 -- Helper Functions
 local function getDefaultSettings()
@@ -98,10 +112,13 @@ end
 
 local function saveSettings(data)
     local file = io.open(settingsFile, "w")
-    if file then
-        file:write(json.encode(data))
-        file:close()
+    if not file then
+        app.alert("AseGit: could not write settings file. Check permissions: " .. settingsFile)
+        return false
     end
+    file:write(json.encode(data))
+    file:close()
+    return true
 end
 
 settings = loadSettings()
@@ -130,10 +147,13 @@ end
 
 local function saveLog(data)
     local file = io.open(logFile, "w")
-    if file then
-        file:write(json.encode(data))
-        file:close()
+    if not file then
+        app.alert("AseGit: could not write log file. Check permissions: " .. logFile)
+        return false
     end
+    file:write(json.encode(data))
+    file:close()
+    return true
 end
 
 local function formatTime(seconds)
@@ -277,7 +297,15 @@ local function performCommitInternal(message, tagOverride)
     local snapName = string.format("%s_%s.aseprite", safeTitle, randomId)
     local snapPath = fs.joinPath(repoDir, snapName)
     
-    app.activeSprite:saveCopyAs(snapPath)
+        if spr and spr.filename then
+            pcall(function() spr:saveCopyAs(snapPath) end)
+        else
+            pcall(function() app.activeSprite:saveCopyAs(snapPath) end)
+        end
+        if not fs.isFile(snapPath) then
+            app.alert("AseGit: failed to save snapshot. Check disk space and permissions:\n" .. snapPath)
+            return
+        end
 
     table.insert(log, {
         id = timestamp,
@@ -289,7 +317,9 @@ local function performCommitInternal(message, tagOverride)
         edits = sessionEdits,
         session_time = (os.time() - sessionStart)
     })
-    saveLog(log)
+        if not saveLog(log) then
+            app.alert("AseGit: snapshot saved but log file could not be updated. Check permissions: " .. logFile)
+        end
 
     sessionEdits = 0
     sessionStart = os.time()
@@ -406,7 +436,9 @@ local function showDiffUI(startIndex)
     local snapImg = nil
     
     local currImg = Image(spr.width, spr.height, spr.colorMode)
-    currImg:drawSprite(spr, app.activeFrame.frameNumber, 0, 0)
+    local frameNumber = 1
+    if app.activeFrame then frameNumber = app.activeFrame.frameNumber end
+    currImg:drawSprite(spr, frameNumber, 0, 0)
     
     local scale = 1
     if spr.width > 300 then
@@ -709,7 +741,7 @@ local function importAsReference()
     newLayer.opacity = 128
     
     app.transaction(function()
-        local refImage = Image(refSpr.width, refSpr.height)
+        local refImage = Image(refSpr.width, refSpr.height, spr.colorMode)
         refImage:drawSprite(refSpr, 1, 0, 0)
         spr:newCel(newLayer, 1, refImage, Point(0, 0))
     end)
