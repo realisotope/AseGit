@@ -1,6 +1,7 @@
 # AseGit
-AseGit is a lightweight version-control helper for Aseprite. It creates simple, local snapshots of your sprite file, records metadata (message, tag, timestamp, edits and session time), and provides a small UI inside Aseprite for browsing, visual diffing, and reloading past snapshots.
-![]()
+### AseGit is a lightweight version-control helper for Aseprite. It creates simple, local snapshots of your sprite file, records metadata (message, tag, timestamp, edits and session time), and provides a small UI inside Aseprite for browsing, visual diffing, and reloading past snapshots.
+
+![](https://raw.githubusercontent.com/realisotope/AseGit/refs/heads/main/asegit_preview.png)
 
 
 ## Features
