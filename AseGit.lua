@@ -244,7 +244,7 @@ local function updateSettingsDisplay()
     mainDlg:show{ wait=false }
 end
 
-local function addMinimizeButton(dlg, widgetIds)
+local function addMinimizeButton(dlg, widgetIds, keepVisibleIds)
     local isCollapsed = false
     dlg:button{
         text="➖",
@@ -254,17 +254,26 @@ local function addMinimizeButton(dlg, widgetIds)
             dlg:modify{ id="min_btn", text=label }
             
             if isCollapsed then
-                for _, id in ipairs(widgetIds) do
-                    dlg:modify{ id=id, visible=false }
+                local keep = {}
+                if keepVisibleIds then
+                    for _, kid in ipairs(keepVisibleIds) do keep[kid] = true end
                 end
+                for _, id in ipairs(widgetIds) do
+                    if keep[id] then
+                        dlg:modify{ id=id, visible=true }
+                    else
+                        dlg:modify{ id=id, visible=false }
+                    end
+                end
+            else
+                for _, id in ipairs(widgetIds) do
+                    dlg:modify{ id=id, visible=true }
+                end
+                updateSettingsDisplay()
             end
             
             if dlg.bounds then
-                if not isCollapsed then
-                    updateSettingsDisplay()
-                else
-                    dlg:show{ wait=false }
-                end
+                dlg:repaint()
             end
         end,
         id="min_btn"
@@ -754,12 +763,13 @@ local mainContentIds = {
     "sep_stats", "stat_session", "stat_total",
     "sep_commit", "tag_entry", "message", "btn_commit",
     "sep_hist", "history_list",
-    "btn_diff", "btn_load", "btn_ref", "btn_log"
+    "btn_diff", "btn_load", "btn_ref", "btn_log",
+    "btn_refresh", "btn_settings"
 }
 
-addMinimizeButton(mainDlg, mainContentIds)
-mainDlg:button{ text="Refresh", onclick=refreshContext }
-mainDlg:button{ text="⚙️", onclick=showSettingsUI }
+addMinimizeButton(mainDlg, mainContentIds, {"btn_commit"})
+mainDlg:button{ id="btn_refresh", text="Refresh", onclick=refreshContext }
+mainDlg:button{ id="btn_settings", text="⚙️", onclick=showSettingsUI }
 mainDlg:newrow()
 
 mainDlg:separator{ id="sep_stats", text="Statistics" }
