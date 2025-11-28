@@ -186,7 +186,14 @@ local function fetchHistoryData()
     local log = loadLog()
     local labels = {}
     local data = {}
+    local maxRecent = 10
+    local count = 0
+    
     for i = #log, 1, -1 do
+        if count >= maxRecent then
+            break
+        end
+        
         local entry = log[i]
         
         local shortIdDisplay = entry.short_id and string.sub(entry.short_id, 1, 6) or ""
@@ -199,6 +206,7 @@ local function fetchHistoryData()
         local label = string.format("%s%s (#%s | %s)", tagDisplay, entry.message, shortIdDisplay, dateStr)
         table.insert(labels, label)
         table.insert(data, entry)
+        count = count + 1
     end
     return labels, data
 end
